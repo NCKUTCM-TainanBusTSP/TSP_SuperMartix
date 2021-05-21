@@ -19,5 +19,6 @@ sp.append(dict({'rsu1': 123, 'rrr': 222}))
 sp.append(dict({'rsu1': 155, 'rrr': 555}))
 print(sp)
 
-
-
+CURRENT_PHASE = range(1, 9, 1)
+for i in CURRENT_PHASE:
+    print(i)
