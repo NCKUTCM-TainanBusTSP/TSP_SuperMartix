@@ -5,6 +5,8 @@ import math
 import configparser
 import copy
 import argparse
+import os
+import sys
 
 from scipy.stats import norm
 from distutils.util import strtobool
@@ -14,19 +16,26 @@ start_time = time.time()
 
 class CloudControl():
 
-
     def __init__(self, SP, planParameters):
         self.SignalPlan = SP
         self.planParameters = planParameters
 
         # Config File Parser
         config = configparser.ConfigParser()
-        config.read('Config.ini')
+        path = '/'.join((os.path.abspath(__file__).replace('\\', '/')).split('/')[:-1])
+        config.read(os.path.join(path, 'Config.ini'))
+        # config = configparser.ConfigParser()
+        # config.read('Config.ini')
         ###### Global Parameters ######
         self.MAX_ADJUST_RATIO = float(config['DEFAULT']['MAX_ADJUST_RATIO'])
         self.SPEED = int(config['DEFAULT']['SPEED'])
         self.Thr = float(config['DEFAULT']['PASS_PROBABILITY_Threshold'])
         self.RSUs = dict()
+
+        if (int(config['OPTIONS']['STD_PRINT']) == 0):
+            sys.stdout = open(os.devnull, 'w')
+        else:
+            sys.stdout = sys.__stdout__
 
     def setPhaseObject(self, i, inputPlan, planID, phaseOrder, offset):
         #I = RSU物件
@@ -838,6 +847,7 @@ class CloudControl():
                       "rt_for_passProb = ", rt_for_passProb, "rt_for_calStrategy = ", rt_for_calStrategy,
                       "pp = ", pp)
 
+
                 result = self.RSUs['rsu1'].calPhaseTimeSplit_NEW(appliedPlanNum=sp, targetPhase=pp, currentPhase=cp,
                                                             remainingTime_gt0=rt_for_passProb, remainingTime_gt1=rt)
                 phaseTimeSplit = result[0]
@@ -974,4 +984,6 @@ class CloudControl():
 
         finalAdjustResult = self.main(arrivalTime=arrivalTime, cp=cp, pp=pp, rt=rt)
         return finalAdjustResult
+
+
 

@@ -13,12 +13,12 @@ from datetime import date
 start_time = time.time()
 
 
-def makeOutputFile(OUTPUT_FILE_PATH, OUTPUT_WITH_INPUT_COLUMN, resultList, sp):
+def makeOutputFile(OUTPUT_FILE_PATH, OUTPUT_WITH_INPUT_COLUMN, resultList, sp, RSU_ID):
 
     today = date.today()
     todayDate = today.strftime("%Y%m%d")
 
-    filePath = OUTPUT_FILE_PATH + '/S428901   _' + str(sp+1) + '_' + todayDate + '.csv'
+    filePath = OUTPUT_FILE_PATH + '/' + RSU_ID + '   _' + str(sp) + '_' + todayDate + '.csv'
 
     if os.path.isfile(filePath):
         print("File exist")
@@ -80,6 +80,7 @@ def readSignalCSV(SIGNAL_PLAN_FILE_NAME, assignedPlanID):
 
                 phaseOrder = row['PhaseOrder']
                 offset = row['Offset']
+                RSU_ID = row['RSU_ID']
 
                 Phase = {'PhaseID': int(row['PhaseID'])-1, 'Green': int(row['Green']), 'PedGreenFlash': int(row['PedFlash']), 'Yellow': int(row['Yellow']),
                          'AllRed': int(row['AllRed']), 'PedRed': int(row['PedRed']), 'Gmin': int(row['MinGreen']),
@@ -87,7 +88,7 @@ def readSignalCSV(SIGNAL_PLAN_FILE_NAME, assignedPlanID):
 
                 Plan.append(Phase)
 
-    return Plan, phaseOrder, offset
+    return Plan, phaseOrder, offset, RSU_ID
 
 
 if __name__ == '__main__':
@@ -114,8 +115,6 @@ if __name__ == '__main__':
     PRIORITIZED_PHASE = range(1, 9, 1)
 
     resultList = []
-
-
     for dist in DIST:
         for speed in [CL.SPEED]:
             arrivalTime = int(dist / speed)
@@ -139,6 +138,10 @@ if __name__ == '__main__':
                             #                result=result, sp=assignedPlanID)
 
                         else:
+
+                            if (arrivalTime == 19 and cp==1 and pp==1 and rt >= 7):
+                                print("xxxx")
+
                             result = CL.run(arrivalTime=arrivalTime, cp=cp, pp=pp, rt=rt)
                             result[0] = dist
 
@@ -164,7 +167,7 @@ if __name__ == '__main__':
                             #                result=result, sp=assignedPlanID)
 
     makeOutputFile(OUTPUT_FILE_PATH=OUTPUT_FILE_PATH, OUTPUT_WITH_INPUT_COLUMN=OUTPUT_WITH_INPUT_COLUMN,
-                   resultList=resultList, sp=assignedPlanID)
+                   resultList=resultList, sp=assignedPlanID, RSU_ID=SP[3])
 
     print("--- 執行共花了 %s seconds ---" % (time.time() - start_time))
 

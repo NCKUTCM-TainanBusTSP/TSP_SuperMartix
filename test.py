@@ -1,24 +1,38 @@
-import itertools
-import configparser
 
-# phasePool = itertools.cycle(['A', 'B', 'C', 'D'])
-# cp = 1
-# revisedPhasePool = itertools.islice(phasePool, cp, None)
-# for item in revisedPhasePool:
-#     print(item)
-#     break
+# a simple file writer object
+
+# class MessageWriter(object):
+#     def __init__(self, file_name):
+#         self.file_name = file_name
 #
-# print(1/0)
-# config = configparser.ConfigParser()
-# config.read('Config.ini')
-# print(config['DEFAULT']['SPEED'])
+#     def __enter__(self):
+#         self.file = open(self.file_name, 'w')
+#         return self.file
+#
+#     def __exit__(self):
+#         self.file.close()
+#
+# # using with statement with MessageWriter
+#
+# with MessageWriter('my_file.txt') as xfile:
+#     xfile.write('hello world')
 
 
-sp = []
-sp.append(dict({'rsu1': 123, 'rrr': 222}))
-sp.append(dict({'rsu1': 155, 'rrr': 555}))
-print(sp)
+import sys, os
 
-CURRENT_PHASE = range(1, 9, 1)
-for i in CURRENT_PHASE:
-    print(i)
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+
+print('This will print')
+
+blockPrint()
+print("This won't")
+
+enablePrint()
+print("This will too")
