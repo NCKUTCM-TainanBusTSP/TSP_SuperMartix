@@ -1,6 +1,6 @@
 
 import math
-import SuperMatrixClass
+import TainanTSP_Class
 import time
 from distutils.util import strtobool
 import configparser
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     Plan = SP[0]
     planParameters = {'phaseOrder': SP[1], 'offset': SP[2]}
 
-    CL = SuperMatrixClass.CloudControl(SP=Plan, planParameters=planParameters, speed=10)
+    CL = TainanTSP_Class.CloudControl(SP=Plan, planParameters=planParameters, speed=10)
 
     DIST = range(10, 510, 10)
     # CURRENT_PHASE = range(0, len(RSUs['rsu1'].plan[sp].phases), 1)  # len(RSUs['rsu1'].plan[sp].phases)
