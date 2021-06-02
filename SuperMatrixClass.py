@@ -16,7 +16,7 @@ start_time = time.time()
 
 class CloudControl():
 
-    def __init__(self, SP, planParameters):
+    def __init__(self, SP, planParameters, speed):
         self.SignalPlan = SP
         self.planParameters = planParameters
 
@@ -28,11 +28,11 @@ class CloudControl():
         # config.read('Config.ini')
         ###### Global Parameters ######
         self.MAX_ADJUST_RATIO = float(config['DEFAULT']['MAX_ADJUST_RATIO'])
-        self.SPEED = int(config['DEFAULT']['SPEED'])
+        self.SPEED = speed
         self.Thr = float(config['DEFAULT']['PASS_PROBABILITY_Threshold'])
         self.RSUs = dict()
 
-        if (int(config['OPTIONS']['STD_PRINT']) == 0):
+        if (strtobool(config['OPTIONS']['STD_PRINT']) == 0):
             sys.stdout = open(os.devnull, 'w')
         else:
             sys.stdout = sys.__stdout__
