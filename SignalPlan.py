@@ -18,7 +18,7 @@ class SignalPlan:
 
 class Phase(SignalPlan):
 
-    def __init__(self, phaseID, startTime, greenSplit, green, Gmin, Gmax, yellow, allRed, pedFlash, pedRed, IsAdjustable, MAX_ADJUST_RATIO):
+    def __init__(self, phaseID, startTime, greenSplit, green, Gmin, Gmax, yellow, allRed, pedFlash, pedRed, IsAdjustable, MAX_EXTENT_ADJUST_RATIO, MAX_TRUNCATION_ADJUST_RATIO):
 
         self.phaseID = phaseID
         #self.phaseOrder = phaseOrder
@@ -35,8 +35,10 @@ class Phase(SignalPlan):
 
         self.IsAdjustable = IsAdjustable
         self.IsInUncontrollableStep = False  # 是否已經在無法控制的步階
-        self.EXTENT_LIMIT = round(green * MAX_ADJUST_RATIO)  # 允許延長最大秒數
-        self.TRUNCATION_LIMIT = round(-(green * MAX_ADJUST_RATIO))  # 允許縮短最大秒數
+        MAX_EXTENT_ADJUST_RATIO = round(MAX_EXTENT_ADJUST_RATIO / 100, 2)
+        self.EXTENT_LIMIT = round(green * MAX_EXTENT_ADJUST_RATIO)  # 允許延長最大秒數
+        MAX_TRUNCATION_ADJUST_RATIO = round(MAX_TRUNCATION_ADJUST_RATIO / 100, 2)
+        self.TRUNCATION_LIMIT = round(-(green * MAX_TRUNCATION_ADJUST_RATIO))  # 允許縮短最大秒數
         self.totalAdjustableAmount = self.EXTENT_LIMIT + self.TRUNCATION_LIMIT  # 最大允許調整秒數
 
     def setParameters(self, phaseID, name, startTime, green, Gmax, Gmin, yellow, allRed,

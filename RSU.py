@@ -4,35 +4,11 @@ from scipy.stats import norm
 #from thesis import RSUObject
 import numpy as np
 
-
-
 phaseStrDict = {0: "J1", 1: "J2", 2: "J3", 3: "J4",4: "J5", 5: "J6", 6: "J7", 7: "J8"}
 phaseStrDict_rev = {"J1": 0, "J2":1, "J3":2, "J4":3, "J5":4, "J6":5, "J7":6, "J8":7}
 phaseLogicPairNum = {0: 0, 1: 0, 2: 3, 3: 3, 4: 6, 5: 6, 6: 9, 7: 9}
 #
-#
-# # 路口群組編號
-# intersectionGroup_outbound = {"01", "02"}
-# intersectionGroup_inbound = {"02", "01"}
-#
-# #路口群組-目標路口對應 (名稱) # outbound 順行 inbound 逆行
-# targetIntersections_outbound = {"G1":['C2','C6'], "G2":['C7','C8','C9']}
-# targetIntersections_inbound = {"G1":['C2'], "G2":['C9', 'C8', 'C7', 'C6']}
-#
-# # 路口 (座標點)
-# intersectionPosition = {"C2": [-364, 50], "C6": [0,50], "C7": [62,50], "C8": [447,50], "C9":[587,50]}
-#
-# # 所有路口編號
-# intersectionList_outbound = ['C2','C6','C7','C8','C9']
-# intersectionList_inbound = ['C9','C8','C7','C6','C2']
-#
-# # 路段長度              # C2 = Begin to C2 = 254 / C6 = C2 To C6 = 364m
-# roadLength_outbound = {"C2": 254, "C6": 364, "C7":62, "C8":385, "C9":140}
-# roadLength_inbound = {"C9": 200, "C8": 140, "C7":385, "C6":62, "C2":254}
-#
-# # 路段累積長度
-# roadLengthAccumulated_outbound = {"C2": 254, "C6": 618, "C7":680, "C8":1065, "C9":1205}
-# roadLengthAccumulated_inbound = {"C9": 200, "C8": 340, "C7":725, "C6":787, "C2":1041}
+
 
 # free flow speed
 Vf = 12
@@ -276,23 +252,23 @@ class BusRSU():
 
 
 
-    # 更新RSU累積週期長度
-    def updateCycleAccumulated(self):
-        nowPhase = traci.trafficlight.getPhase('I1')
-        nowProgramLogic = traci.trafficlight.getAllProgramLogics('I1')
-        if (nowPhase in (11,23) and self.flag == True):
-            #該週期已結束
-            for phase in nowProgramLogic[0].phases:
-                phaseDuration = phase.duration
-                # 累計新增該週期時間
-                self.CycleAccumulated = self.CycleAccumulated + phaseDuration
-            self.flag = False
-
-            if (nowPhase == 23 and traci.trafficlight.getProgram('I1') == '1'): # switch TLS program from '1' to '0'
-                traci.trafficlight.setProgram('I1', '0')
-
-        else:
-            self.flag = True
+    # # 更新RSU累積週期長度
+    # def updateCycleAccumulated(self):
+    #     nowPhase = traci.trafficlight.getPhase('I1')
+    #     nowProgramLogic = traci.trafficlight.getAllProgramLogics('I1')
+    #     if (nowPhase in (11,23) and self.flag == True):
+    #         #該週期已結束
+    #         for phase in nowProgramLogic[0].phases:
+    #             phaseDuration = phase.duration
+    #             # 累計新增該週期時間
+    #             self.CycleAccumulated = self.CycleAccumulated + phaseDuration
+    #         self.flag = False
+    #
+    #         if (nowPhase == 23 and traci.trafficlight.getProgram('I1') == '1'): # switch TLS program from '1' to '0'
+    #             traci.trafficlight.setProgram('I1', '0')
+    #
+    #     else:
+    #         self.flag = True
 
     # 計算公車優先號誌需要處理幾個cycle
     def cal_NumOfCycleToProcess(self, OBU):

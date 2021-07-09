@@ -8,6 +8,7 @@ import configparser
 import csv
 import os.path
 from datetime import date
+import argparse
 
 
 start_time = time.time()
@@ -84,7 +85,7 @@ def readSignalCSV(SIGNAL_PLAN_FILE_NAME, assignedPlanID):
 
                 Phase = {'PhaseID': int(row['PhaseID'])-1, 'Green': int(row['Green']), 'PedGreenFlash': int(row['PedFlash']), 'Yellow': int(row['Yellow']),
                          'AllRed': int(row['AllRed']), 'PedRed': int(row['PedRed']), 'Gmin': int(row['MinGreen']),
-                         'Gmax': int(row['MaxGreen']), 'IsAdjustable': strtobool(row['IsAdjustable'])}
+                         'Gmax': int(row['MaxGreen']), 'IsAdjustable': 1}
 
                 Plan.append(Phase)
 
@@ -95,17 +96,29 @@ if __name__ == '__main__':
     # Config File Parser
     config = configparser.ConfigParser()
     config.read('Config.ini')
-    assignedPlanID = int(config['OPTIONS']['ASSIGENED_PLAN_NUM'])
-    SIGNAL_PLAN_FILE_NAME = config['OPTIONS']['SIGNAL_PLAN_FILE_NAME']
-    OUTPUT_WITH_INPUT_COLUMN = strtobool(config['OPTIONS']['OUTPUT_WITH_INPUT_COLUMN'])
-    OUTPUT_FILE_PATH = config['OPTIONS']['OUTPUT_FILE_PATH']
+    #assignedPlanID = int(config['OPTIONS']['ASSIGENED_PLAN_NUM'])
+    SIGNAL_PLAN_FILE_NAME = config['DEFAULT']['SIGNAL_PLAN_FILE_NAME']
+    OUTPUT_WITH_INPUT_COLUMN = True
+    OUTPUT_FILE_PATH = config['DEFAULT']['OUTPUT_FILE_PATH']
 
-    SP = readSignalCSV(SIGNAL_PLAN_FILE_NAME, assignedPlanID)
+    parser = argparse.ArgumentParser(description="SuperMaxtrix Generation")
+
+    parser.add_argument("-maxEXT", help="Signal adjust upper bound percentage (Unit: Integer)", type=int)
+    parser.add_argument("-maxTRU", help="Signal adjust lower bound percentage (Unit: Integer)", type=int)
+    parser.add_argument("-speed", help="Speed (Unit: m/s)", type=int)
+    parser.add_argument("-noAdjustGreenLength", help="if the green length of a phase is less than this value, the phase will not be controlled. (Unit: Integer)", type=int)
+    parser.add_argument("-assignedPlanNumber", help="the plan number that you hope SUPERMATRIX generate for (Unit: Integer)", type=int)
+    parser.print_help()
+    args = parser.parse_args()
+    assignedPlanNumber = args.assignedPlanNumber
+    SP = readSignalCSV(SIGNAL_PLAN_FILE_NAME, assignedPlanNumber)
 
     Plan = SP[0]
     planParameters = {'phaseOrder': SP[1], 'offset': SP[2]}
 
-    CL = TainanTSP_Class.CloudControl(SP=Plan, planParameters=planParameters, speed=10)
+    CL = TainanTSP_Class.CloudControl(SP=Plan, planParameters=planParameters, speed=args.speed,
+                                      MAX_EXTENT_ADJ_RATIO=args.maxEXT, MAX_TRUNCATION_ADJ_RATIO=args.maxTRU,
+                                      PASS_PROBABILITY_Threshold=80, NoAdjustGreenLength=args.noAdjustGreenLength)
 
     DIST = range(10, 510, 10)
     # CURRENT_PHASE = range(0, len(RSUs['rsu1'].plan[sp].phases), 1)  # len(RSUs['rsu1'].plan[sp].phases)
@@ -121,7 +134,8 @@ if __name__ == '__main__':
             for cp in CURRENT_PHASE:
                 REMAINING_TIME = range(1, 200, 2)
                 for rt in REMAINING_TIME:
-                    # 特別說明：(1) 控制器的rt指 剩餘綠燈 + 行閃 + 行紅 + 黃燈 + 全紅
+                    # 時相剩於秒數(rt)
+                    # 說明：(1) 控制器的rt指 剩餘綠燈 + 行閃 + 行紅 + 黃燈 + 全紅
                     #           (2) 本程式rt指 剩餘綠燈秒數
                     # 綜合以上兩者需進行判斷轉換
                     # rt_for_passProb = 用於計算通過機率的rt
@@ -138,7 +152,7 @@ if __name__ == '__main__':
 
                         else:
 
-                            if (arrivalTime == 19 and cp==1 and pp==1 and rt >= 7):
+                            if (arrivalTime == 1 and cp==1 and pp==3 and rt == 1):
                                 print("xxxx")
 
                             result = CL.run(arrivalTime=arrivalTime, cp=cp, pp=pp, rt=rt)
@@ -160,13 +174,13 @@ if __name__ == '__main__':
                         else:
                             input = result[4:]  # 前面0~3為dist, cp, pp, rt截掉
 
-                        resultList.append(result)
+                        resultList.append(input)
 
                             # makeOutputFile(OUTPUT_FILE_PATH=OUTPUT_FILE_PATH, OUTPUT_WITH_INPUT_COLUMN=OUTPUT_WITH_INPUT_COLUMN,
                             #                result=result, sp=assignedPlanID)
 
     makeOutputFile(OUTPUT_FILE_PATH=OUTPUT_FILE_PATH, OUTPUT_WITH_INPUT_COLUMN=OUTPUT_WITH_INPUT_COLUMN,
-                   resultList=resultList, sp=assignedPlanID, RSU_ID=SP[3])
+                   resultList=resultList, sp=assignedPlanNumber, RSU_ID=SP[3])
 
     print("--- 執行共花了 %s seconds ---" % (time.time() - start_time))
 

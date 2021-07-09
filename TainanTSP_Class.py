@@ -4,9 +4,10 @@ import SignalPlan
 import math
 import configparser
 import copy
-import argparse
 import os
 import sys
+import argparse
+
 
 from scipy.stats import norm
 from distutils.util import strtobool
@@ -16,7 +17,7 @@ start_time = time.time()
 
 class CloudControl():
 
-    def __init__(self, SP, planParameters, speed):
+    def __init__(self, SP, planParameters, speed, MAX_EXTENT_ADJ_RATIO, MAX_TRUNCATION_ADJ_RATIO, PASS_PROBABILITY_Threshold, NoAdjustGreenLength):
         self.SignalPlan = SP
         self.planParameters = planParameters
 
@@ -24,15 +25,17 @@ class CloudControl():
         config = configparser.ConfigParser()
         path = '/'.join((os.path.abspath(__file__).replace('\\', '/')).split('/')[:-1])
         config.read(os.path.join(path, 'Config.ini'))
-        # config = configparser.ConfigParser()
-        # config.read('Config.ini')
+
         ###### Global Parameters ######
-        self.MAX_ADJUST_RATIO = float(config['DEFAULT']['MAX_ADJUST_RATIO'])
+        #self.MAX_ADJUST_RATIO = float(config['DEFAULT']['MAX_ADJUST_RATIO'])
+        self.MAX_EXTENT_ADJ_RATIO = MAX_EXTENT_ADJ_RATIO
+        self.MAX_TRUNCATION_ADJ_RATIO = MAX_TRUNCATION_ADJ_RATIO
+        self.NoAdjustGreenLength = NoAdjustGreenLength
         self.SPEED = speed
-        self.Thr = float(config['DEFAULT']['PASS_PROBABILITY_Threshold'])
+        self.Thr = round(PASS_PROBABILITY_Threshold / 100, 2)
         self.RSUs = dict()
 
-        if (strtobool(config['OPTIONS']['STD_PRINT']) == 0):
+        if (strtobool(config['DEFAULT']['STD_PRINT']) == 0):
             sys.stdout = open(os.devnull, 'w')
         else:
             sys.stdout = sys.__stdout__
@@ -49,7 +52,9 @@ class CloudControl():
             PhaseObjectList.append(SignalPlan.Phase(phaseID=inputPlan[phase]['phaseID'], startTime=inputPlan[phase]['startTime'],
                                                     greenSplit=inputPlan[phase]['greenSplit'],green=inputPlan[phase]['green'], yellow=inputPlan[phase]['yellow'],
                                                     allRed=inputPlan[phase]['allRed'], Gmin=inputPlan[phase]['Gmin'], Gmax=inputPlan[phase]['Gmax'], pedFlash=inputPlan[phase]['pedFlash'],
-                                                    pedRed=inputPlan[phase]['pedRed'], IsAdjustable=inputPlan[phase]['IsAdjustable'], MAX_ADJUST_RATIO=self.MAX_ADJUST_RATIO))
+                                                    pedRed=inputPlan[phase]['pedRed'], IsAdjustable=inputPlan[phase]['IsAdjustable'],
+                                                    MAX_EXTENT_ADJUST_RATIO=self.MAX_EXTENT_ADJ_RATIO,
+                                                    MAX_TRUNCATION_ADJUST_RATIO=self.MAX_TRUNCATION_ADJ_RATIO))
 
         CYCLE = 0
         for phase in PhaseObjectList:  # 計算週期
@@ -78,11 +83,12 @@ class CloudControl():
         for phase in SignalPlanDict:
 
             greenSplit = phase['Green'] + phase['PedGreenFlash']
+            phaseAdjustable = 0 if (phase['Green'] <= self.NoAdjustGreenLength) else 1
 
             Phase = {'startTime': 0, 'phaseID': phase['PhaseID'], 'greenSplit': greenSplit,
                      'green': phase['Green'], 'pedFlash': phase['PedGreenFlash'], 'yellow': phase['Yellow'],
                      'allRed': phase['AllRed'], 'pedRed': phase['PedRed'], 'Gmin': phase['Gmin'], 'Gmax': phase['Gmax'],
-                     'IsAdjustable': phase['IsAdjustable']}
+                     'IsAdjustable': phaseAdjustable}
 
             Plan.append(Phase)
 
@@ -232,7 +238,6 @@ class CloudControl():
                         # except ZeroDivisionError:
                         #     divisionResult = 0
 
-                        #pts[3] = pts[3] + divisionResult
                         pts[3] = pts[3] + phaseEXTandTRC_result['cycle1_PP_TruncationAmount']
                         updatePhaseTimeSplit(origin_pts=origin_pts)
 
@@ -426,7 +431,12 @@ class CloudControl():
                             cycle0_nonPP_TruncationAmount = cycle0_nonPP_TruncationAmount + 0
 
                 else:
-                    for phase in RSU.plan[appliedPlanNum].phases[currentPhase:prioritizedPhase]:  # 從currentPhase開始依序取出phase物件，直到prioritizedPhase的前一個phase
+                    for phase in RSU.plan[appliedPlanNum].phases[currentPhase:]:  # 從currentPhase開始依序取出phase物件
+
+                        # 先檢查: 挑出的phase是不是 prioritizedPhase
+                        if (phase.phaseID == prioritizedPhase):
+                            break  # 挑出的phase 是 prioritizedPhase 即停止迴圈: 因為紅燈切斷到最短只做到prioritizedPhase之前
+
                         # 切斷非優先時相至最短: 分為 (1) 當下運作時相 (2) 非當下運作時相
                         if (phase.IsAdjustable and phase.IsInUncontrollableStep == False):
                             # 條件: 若phase的行閃>0 -> 則GminLimit=0不受限
@@ -445,6 +455,7 @@ class CloudControl():
                                     cycle0_nonPP_TruncationAmount = cycle0_nonPP_TruncationAmount + 0
                             else:  # 時相編號不是當下運作時相
                                 cycle0_nonPP_TruncationAmount = cycle0_nonPP_TruncationAmount + phase.TRUNCATION_LIMIT
+
 
 
                 if (cycle0_nonPP_TruncationAmount == 0):
@@ -716,7 +727,7 @@ class CloudControl():
                     cycle0_nonPP_ExtentAmount = cycle0_nonPP_ExtentAmount + phase.EXTENT_LIMIT
 
         # 切斷
-        for phase in RSU.plan[appliedPlanNum].phases[currentPhase:prioritizedPhase]:  # 從currentPhase開始取出時相物件
+        for phase in RSU.plan[appliedPlanNum].phases[currentPhase:]:  # 從currentPhase開始取出時相物件
             # 遇到currentPhase特別挑出: 避免違反Gmin條件，另需區分greentTag = 0 或 greenTag = 1 兩種狀況
             # 條件: 若phase的行閃>0 -> 則GminLimit=0不受限
 
@@ -753,6 +764,10 @@ class CloudControl():
                     else:
                         cycle0_nonPP_TruncationAmount = cycle0_nonPP_TruncationAmount + phase.TRUNCATION_LIMIT
 
+            # 最後檢查
+            if (phase.phaseID == prioritizedPhase):
+                break  # 挑出的phase 到prioritizedPhase 即停止迴圈
+
         if cycleAmount == 2:  # 需要調整兩個週期的，再新增下一個週期的調整量
             ## Cycle 1: 計算下個cycle各phase可以延長/切斷量 ##
 
@@ -780,7 +795,6 @@ class CloudControl():
                             'max_PP_ExtentAmount':max_PP_ExtentAmount, 'max_PP_TruncationAmount':max_PP_TruncationAmount}
 
         return resultDictionary
-
 
     def main(self, arrivalTime, cp, pp, rt):
 
@@ -865,8 +879,6 @@ class CloudControl():
 
                     numOfCycleToProcess = self.RSUs['rsu1'].cal_NumOfCycleToProcess_NEW(dist=dist, speed=0, arrivalTime=arrivalTime, cp=cp, rt=rt_for_passProb, sp=sp)
 
-                    # 20210520
-
                     if (numOfCycleToProcess > 1):
                         print("rrrr")
                     result = self.calPhase_MAX_EXTENT_and_TRUNCATE(RSU=self.RSUs['rsu1'], cycleAmount=numOfCycleToProcess, appliedPlanNum=sp,
@@ -936,6 +948,14 @@ class CloudControl():
                         phaseTimeSplit_result = self.Algorithm2_1(RSU=self.RSUs['rsu1'], truncate_red_light_to_min=True, pts=phaseTimeSplit,
                                                              greenTag=greentag, a=0, b=0, numOfCycleToProcess=numOfCycleToProcess,
                                                              appliedPlanNum=sp, prioritizedPhase=pp, currentPhase=cp, remainingTime=rt_for_calStrategy, phaseEXTandTRC_result=0)
+
+                        # exception test-> 檢查回傳值是否有負值:
+                        if (phaseTimeSplit_result != False):
+                            for num in phaseTimeSplit_result:
+                                if num < 0:
+                                    # print("error")
+                                    print(1 / 0)  # 丟出exception
+
                         phaseTimeSplit = copy.deepcopy(original_pts)  # phaseTimeSplit回復到原始時制
                         if (phaseTimeSplit_result != False):
                             finalPassProb = self.calPassProb(dist=dist, arrivalTime=arrivalTime, phaseTimeSplit=phaseTimeSplit_result, greenTag=greentag)
