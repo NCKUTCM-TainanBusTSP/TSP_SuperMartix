@@ -98,7 +98,7 @@ if __name__ == '__main__':
     config.read('Config.ini')
     #assignedPlanID = int(config['OPTIONS']['ASSIGENED_PLAN_NUM'])
     SIGNAL_PLAN_FILE_NAME = config['DEFAULT']['SIGNAL_PLAN_FILE_NAME']
-    OUTPUT_WITH_INPUT_COLUMN = True
+    OUTPUT_WITH_INPUT_COLUMN = False
     OUTPUT_FILE_PATH = config['DEFAULT']['OUTPUT_FILE_PATH']
 
     parser = argparse.ArgumentParser(description="SuperMaxtrix Generation")

@@ -796,9 +796,7 @@ class CloudControl():
 
         return resultDictionary
 
-    def main(self, arrivalTime, cp, pp, rt):
-
-        dist = int(self.SPEED * arrivalTime)
+    def main(self, dist, arrivalTime, cp, pp, rt):
 
         M = 9999999
 
@@ -995,15 +993,12 @@ class CloudControl():
 
             return finalAdjustResult
 
-    def run(self, arrivalTime, cp, pp, rt):
+    def run(self, dist, arrivalTime, cp, pp, rt):
 
         self.initialization(self.SignalPlan, self.planParameters)  # 初始化號誌物件
 
         cp = cp - 1  #Unify the units of phase number to start from 0
         pp = pp - 1
 
-        finalAdjustResult = self.main(arrivalTime=arrivalTime, cp=cp, pp=pp, rt=rt)
+        finalAdjustResult = self.main(arrivalTime=arrivalTime, cp=cp, pp=pp, rt=rt, dist=dist)
         return finalAdjustResult
-
-
-
